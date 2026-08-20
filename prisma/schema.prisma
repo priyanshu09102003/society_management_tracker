@@ -31,6 +31,7 @@ model User {
   passwordHash  String
   role          Role     @default(RESIDENT)
   flatNumber    String?
+  isApproved    Boolean  @default(false) 
   createdAt     DateTime @default(now())
 
   complaints        Complaint[]        @relation("ComplaintResident")
