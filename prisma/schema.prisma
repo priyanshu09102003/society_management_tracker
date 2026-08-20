@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -10,4 +5,89 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum Role {
+  RESIDENT
+  ADMIN
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  role          Role     @default(RESIDENT)
+  flatNumber    String?
+  createdAt     DateTime @default(now())
+
+  complaints        Complaint[]        @relation("ComplaintResident")
+  statusChanges     StatusHistory[]    @relation("StatusChangedBy")
+  notices           Notice[]           @relation("NoticeAuthor")
+}
+
+model Complaint {
+  id            String          @id @default(cuid())
+  category      String
+  description   String
+  photoUrl      String?
+  priority      Priority        @default(LOW)
+  currentStatus ComplaintStatus @default(OPEN)
+  isOverdue     Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  resolvedAt    DateTime?
+
+  residentId    String
+  resident      User            @relation("ComplaintResident", fields: [residentId], references: [id])
+
+  history       StatusHistory[]
+
+  @@index([currentStatus])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model StatusHistory {
+  id            String          @id @default(cuid())
+  status        ComplaintStatus
+  note          String?
+  timestamp     DateTime        @default(now())
+
+  complaintId   String
+  complaint     Complaint       @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  changedById   String
+  changedBy     User            @relation("StatusChangedBy", fields: [changedById], references: [id])
+
+  @@index([complaintId])
+}
+
+model Notice {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  isImportant Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  authorId    String
+  author      User     @relation("NoticeAuthor", fields: [authorId], references: [id])
+
+  @@index([isImportant])
+}
+
+model Settings {
+  id                String @id @default(cuid())
+  overdueThresholdDays Int  @default(5)
 }
